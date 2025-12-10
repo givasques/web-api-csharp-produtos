@@ -1,6 +1,13 @@
+using Microsoft.EntityFrameworkCore;
+using ProdutosAPI.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+var connectionString = builder.Configuration.GetConnectionString("ProductConnection");
+builder.Services.AddDbContext<ProductContext>(opts => opts.UseMySql(connectionString,
+    ServerVersion.AutoDetect(connectionString)));
 
 // Add services to the container.
 

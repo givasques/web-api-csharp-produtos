@@ -1,5 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ProdutosAPI.Data;
 using ProdutosAPI.Dtos;
 using ProdutosAPI.Models;
 using ProdutosAPI.Profiles;
@@ -10,12 +12,12 @@ namespace ProdutosAPI.Controllers
     [Route("[controller]")]
     public class ProductController : ControllerBase
     {
-        private static List<Product> products = new List<Product>();
-        private static int id = 0;
+        private ProductContext _context;
         private IMapper _mapper;
 
-        public ProductController(IMapper mapper)
+        public ProductController(ProductContext context, IMapper mapper)
         {
+            _context = context;
             _mapper = mapper;
         }
 
@@ -23,22 +25,21 @@ namespace ProdutosAPI.Controllers
         public IActionResult CreateProduct([FromBody] CreateProductDto dto)
         {
             var product = _mapper.Map<Product>(dto);
-            id++;
-            product.Id = id;
-            products.Add(product);
+            _context.Products.Add(product);
+            _context.SaveChanges();
             return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
         }
 
         [HttpGet]
-        public IEnumerable<ReadProductDto> GetProducts()
+        public IEnumerable<ReadProductDto> GetProducts([FromQuery] int skip = 0, [FromQuery]  int take = 10)
         {
-            return _mapper.Map<IEnumerable<ReadProductDto>>(products);
+            return _mapper.Map<IEnumerable<ReadProductDto>>(_context.Products.Skip(skip).Take(take));
         }
 
         [HttpGet("{id}")]
         public IActionResult GetProductById(int id)
         {
-            var product = products.FirstOrDefault(p => p.Id == id);
+            var product = _context.Products.FirstOrDefault(p => p.Id == id);
             if (product is null) return NotFound();
             var dto = _mapper.Map<ReadProductDto>(product);
             return Ok(dto);
@@ -47,19 +48,20 @@ namespace ProdutosAPI.Controllers
         [HttpDelete("{id}")]
         public IActionResult DeleteProductById(int id)
         {
-            var product = products.FirstOrDefault(p => p.Id == id);
+            var product = _context.Products.FirstOrDefault(p => p.Id == id);
             if (product is null) return NotFound();
-            products.Remove(product);
+            _context.Products.Remove(product);
+            _context.SaveChanges();
             return NoContent();
         }
 
         [HttpPut("{id}")]
         public IActionResult UpdateProductById(int id, [FromBody] UpdateProductDto dto)
         {
-            var product = products.FirstOrDefault(p => p.Id == id);
+            var product = _context.Products.FirstOrDefault(p => p.Id == id);
             if (product is null) return NotFound();
-            var index = products.IndexOf(product);
-            products[index] = _mapper.Map(dto, product);
+            _mapper.Map(dto, product);
+            _context.SaveChanges();
             return NoContent();
         }
     }
